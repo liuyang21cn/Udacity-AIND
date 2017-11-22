@@ -112,6 +112,7 @@ class SelectorDIC(ModelSelector):
         # TODO implement model selection based on DIC scores
         best_score = float('-inf')
         best_model = None
+        M = len(self.words.keys())
 
         for num_states in range(self.min_n_components, self.max_n_components+1):
             try :
