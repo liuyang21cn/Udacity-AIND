@@ -112,19 +112,24 @@ class SelectorDIC(ModelSelector):
         # TODO implement model selection based on DIC scores
         best_score = float('-inf')
         best_model = None
-        M = len(self.hwords.keys())
+        M = len(self.words.keys())
         models = {}
 
         for num_states in range(self.min_n_components, self.max_n_components+1):
             log_sum = 0.0
+            DIC_Score = float('-inf')
             try :
                 model = self.base_model(num_states)
                 logL = model.score(self.X, self.lengths)
                 for word in self.hwords:
                     if word != self.this_word:
-                        log_sum += model.score(self.hwords[word])
+                        try:
+                            log_sum += model.score(self.hwords[word])
+                        except:
+                            log_sum += 0.0
             except:
-                best_model = None
+                logL = float('-inf')
+                # pass
                 # return None
             DIC_Score = logL - 1.0/(M-1)*log_sum
             if DIC_Score > best_score:
@@ -151,22 +156,24 @@ class SelectorCV(ModelSelector):
         best_model = None
 
         for num_states in range(self.min_n_components, self.max_n_components+1):
-            try :
-                if len(self.sequences) < n_split:
-                    # use base model if can't use KFold
+            if len(self.sequences) < n_split:
+                # use base model if can't use KFold
+                try:
                     model = self.base_model(num_states)
                     logL = model.score(self.X, self.lengths)
-                    logLs.append(logL)
-                else:
-                    for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
-                        self.X, self.lengths = combine_sequences(cv_train_idx, self.sequences)
-                        X_test, lengths_test = combine_sequences(cv_test_idx,  self.sequences)
+                except:
+                    logL = 0
+                logLs.append(logL)
+            else:
+                for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
+                    self.X, self.lengths = combine_sequences(cv_train_idx, self.sequences)
+                    X_test, lengths_test = combine_sequences(cv_test_idx,  self.sequences)
+                    try:
                         model = self.base_model(num_states)
                         logL  = model.score(X_test, lengths_test)
-                        logLs.append(logL)
-            except:
-                best_model = None
-                # return None
+                    except:
+                        logL = 0
+                    logLs.append(logL)
             avg_logL = np.mean(logLs)
             if avg_logL > best_score:
                 best_score = avg_logL
