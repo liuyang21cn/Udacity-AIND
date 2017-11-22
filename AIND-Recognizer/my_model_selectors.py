@@ -112,18 +112,21 @@ class SelectorDIC(ModelSelector):
         # TODO implement model selection based on DIC scores
         best_score = float('-inf')
         best_model = None
-        M = len(self.words.keys())
+        M = len(self.hwords.keys())
+        models = {}
 
         for num_states in range(self.min_n_components, self.max_n_components+1):
+            log_sum = 0.0
             try :
                 model = self.base_model(num_states)
                 logL = model.score(self.X, self.lengths)
-                logN = np.log(sum(self.lengths))
-                p = num_states + num_states*(num_states-1) + num_states*sum(self.lengths)*2
-                DIC_Score = -2.0 * logL + p * logN
+                for word in self.hwords:
+                    if word != self.this_word:
+                        log_sum += model.score(self.hwords[word])
             except:
                 best_model = None
                 # return None
+            DIC_Score = logL - 1.0/(M-1)*log_sum
             if DIC_Score > best_score:
                 best_score = DIC_Score
                 best_model = model
