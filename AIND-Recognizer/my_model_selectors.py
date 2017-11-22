@@ -77,8 +77,24 @@ class SelectorBIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        best_score = float('-inf')
+        best_model = None
 
+        for num_states in range(self.min_n_components, self.max_n_components+1):
+            try :
+                model = self.base_model(num_states)
+                logL = model.score(self.X, self.lengths)
+                logN = np.log(sum(self.lengths))
+                p = num_states + num_states*(num_states-1) + num_states*sum(self.lengths)*2
+                BIC_Score = -2.0 * logL + p * logN
+            except:
+                best_model = None
+                # return None
+            if BIC_Score > best_score:
+                best_score = BIC_Score
+                best_model = model
+
+        return best_model
 
 class SelectorDIC(ModelSelector):
     ''' select best model based on Discriminative Information Criterion
@@ -94,8 +110,24 @@ class SelectorDIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+        best_score = float('-inf')
+        best_model = None
 
+        for num_states in range(self.min_n_components, self.max_n_components+1):
+            try :
+                model = self.base_model(num_states)
+                logL = model.score(self.X, self.lengths)
+                logN = np.log(sum(self.lengths))
+                p = num_states + num_states*(num_states-1) + num_states*sum(self.lengths)*2
+                DIC_Score = -2.0 * logL + p * logN
+            except:
+                best_model = None
+                # return None
+            if DIC_Score > best_score:
+                best_score = DIC_Score
+                best_model = model
+
+        return best_model
 
 class SelectorCV(ModelSelector):
     ''' select best model based on average log Likelihood of cross-validation folds
@@ -106,4 +138,34 @@ class SelectorCV(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection using CV
-        raise NotImplementedError
+
+        # Initialize KFold
+        n_split = 3
+        split_method = KFold(n_splits = n_split)
+        logLs = []
+        best_score = float('-inf')
+        best_model = None
+
+        for num_states in range(self.min_n_components, self.max_n_components+1):
+            try :
+                if len(self.sequences) < n_split:
+                    # use base model if can't use KFold
+                    model = self.base_model(num_states)
+                    logL = model.score(self.X, self.lengths)
+                    logLs.append(logL)
+                else:
+                    for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
+                        self.X, self.lengths = combine_sequences(cv_train_idx, self.sequences)
+                        X_test, lengths_test = combine_sequences(cv_test_idx,  self.sequences)
+                        model = self.base_model(num_states)
+                        logL  = model.score(X_test, lengths_test)
+                        logLs.append(logL)
+            except:
+                best_model = None
+                # return None
+            avg_logL = np.mean(logLs)
+            if avg_logL > best_score:
+                best_score = avg_logL
+                best_model = model
+
+        return best_model
