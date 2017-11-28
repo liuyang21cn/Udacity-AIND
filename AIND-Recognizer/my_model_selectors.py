@@ -77,7 +77,8 @@ class SelectorBIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on BIC scores
-        best_score = float('-inf')
+        best_score, best_n_components = None, None
+        min_bic = float('inf')
         best_model = None
 
         for num_states in range(self.min_n_components, self.max_n_components+1):
@@ -85,17 +86,39 @@ class SelectorBIC(ModelSelector):
                 # for each number of states, caclulate the logL and BIC score
                 model = self.base_model(num_states)
                 logL = model.score(self.X, self.lengths)
-                logN = np.log(sum(self.lengths))
-                p = num_states + num_states*(num_states-1) + num_states*sum(self.lengths)*2
+                logN = np.log(len(self.X))
+                N = sum(self.lengths)
+                n_features = self.X.shape[1]
+                p = num_states*(num_states-1) + 2 * n_features * n_components
                 BIC_Score = -2.0 * logL + p * logN
-            except:
-                best_model = None
-            # update best model
-            if BIC_Score > best_score:
-                best_score = BIC_Score
-                best_model = model
+                if BIC_Score < min_bic:
+                    min_bic = BIC_Score
+                    best_model = model
 
-        return best_model
+            except Exception as e:
+                continue
+
+        return best_model if best_model else self.base_model(self.n_constant)
+
+        # best_score = float('-inf')
+        # best_model = None
+        #
+        # for num_states in range(self.min_n_components, self.max_n_components+1):
+        #     try :
+        #         # for each number of states, caclulate the logL and BIC score
+        #         model = self.base_model(num_states)
+        #         logL = model.score(self.X, self.lengths)
+        #         logN = np.log(sum(self.lengths))
+        #         p = num_states + num_states*(num_states-1) + num_states*sum(self.lengths)*2
+        #         BIC_Score = -2.0 * logL + p * logN
+        #     except Exception as e:
+        #         continue
+        #     # update best model
+        #     if BIC_Score > best_score:
+        #         best_score = BIC_Score
+        #         best_model = model
+        #
+        # return best_model
 
 class SelectorDIC(ModelSelector):
     ''' select best model based on Discriminative Information Criterion
