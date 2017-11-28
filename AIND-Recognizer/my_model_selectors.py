@@ -82,6 +82,7 @@ class SelectorBIC(ModelSelector):
 
         for num_states in range(self.min_n_components, self.max_n_components+1):
             try :
+                # for each number of states, caclulate the logL and BIC score
                 model = self.base_model(num_states)
                 logL = model.score(self.X, self.lengths)
                 logN = np.log(sum(self.lengths))
@@ -89,7 +90,7 @@ class SelectorBIC(ModelSelector):
                 BIC_Score = -2.0 * logL + p * logN
             except:
                 best_model = None
-                # return None
+            # update best model
             if BIC_Score > best_score:
                 best_score = BIC_Score
                 best_model = model
@@ -118,6 +119,8 @@ class SelectorDIC(ModelSelector):
         for num_states in range(self.min_n_components, self.max_n_components+1):
             log_sum = 0.0
             DIC_Score = float('-inf')
+            # for each number of states, caclulate the logL and add to log_sum
+            # if the current word is not this word
             try :
                 model = self.base_model(num_states)
                 logL = model.score(self.X, self.lengths)
@@ -129,8 +132,7 @@ class SelectorDIC(ModelSelector):
                             log_sum += 0.0
             except:
                 logL = float('-inf')
-                # pass
-                # return None
+            # calculate DIC score and update best model
             DIC_Score = logL - 1.0/(M-1)*log_sum
             if DIC_Score > best_score:
                 best_score = DIC_Score
@@ -155,7 +157,10 @@ class SelectorCV(ModelSelector):
         best_score = float('-inf')
         best_model = None
 
+        # run for different number of states
         for num_states in range(self.min_n_components, self.max_n_components+1):
+            # if the length of sequences less than number of split,
+            # don't use CV
             if len(self.sequences) < n_split:
                 # use base model if can't use KFold
                 try:
@@ -174,7 +179,9 @@ class SelectorCV(ModelSelector):
                     except:
                         logL = 0
                     logLs.append(logL)
+            # calculate average of log likelihood
             avg_logL = np.mean(logLs)
+            # find the best model
             if avg_logL > best_score:
                 best_score = avg_logL
                 best_model = model
